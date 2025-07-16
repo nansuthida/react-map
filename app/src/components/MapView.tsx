@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import './MapView.css';
 import webservice from '../services/webservice.service';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 const baseMapStyles = [
     {
@@ -128,7 +129,7 @@ const MapView: React.FC = () => {
                 }
             };
 
-        } else if (layer.name_en === "bma_school" || layer.name_en === "air_pollution") {
+        } else if (layer.name_en === "bma_school" || layer.name_en === "air_pollution" || layer.name_en === "bma_cctv") {
             const iconId = `${layer.name_en}_icon`;
             if (!mapInstance.hasImage(iconId)) {
                 loadImagePopup({
@@ -248,6 +249,20 @@ const MapView: React.FC = () => {
                 <b>Code:</b> ${props.dcode}<br/>
             </div>
         `
+        } if (layer == "bma_cctv") {
+            content = `
+            <div style="font-size: 12px;">
+                <b>ID:</b> ${props.ID}<br/>
+                <b>District:</b> ${props.District}<br/>
+                <b>Location:</b> ${props.location}<br/>
+                <b>Code DVR:</b> ${props["Code DVR"]}<br/>
+                <b>ID Camera:</b> ${props[" ID Camera"]}<br/>
+                <b>Project:</b> ${props.project}<br/>
+                <b>Lat:</b> ${props.lat}<br/>
+                <b>Long:</b> ${props.long}<br/>
+            </div>
+            `;
+
         }
         return content
     }
@@ -295,6 +310,19 @@ const MapView: React.FC = () => {
                 if (layer.type === "geojson") {
                     const res = await webservice.loadGeojsonFile(`/assets/geodata/${layer.path}`);
                     geojson = res.status === 200 ? res.data : null;
+                } else if (layer.type === "csv") {
+                    const res = await webservice.loadCSVFile(`/assets/geodata/${layer.path}`);
+                    if (res.length > 0) {
+                        geojson = {
+                            type: "FeatureCollection",
+                            features: res.map((d: any) => ({
+                                type: "Feature",
+                                geometry: { type: "Point", coordinates: [+d.long, +d.lat] },
+                                properties: d,
+                            })),
+                        };
+                    }
+
                 }
                 const fullLayer = { ...layer, geojson };
                 loadedLayers.push(fullLayer);
